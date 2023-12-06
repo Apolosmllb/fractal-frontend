@@ -346,7 +346,12 @@ export default function AddEditOrder() {
                     {product.name}
                   </TableCell>
                   <TableCell align="right">{product.unit_price}</TableCell>
-                  <TableCell align="right">{product.qty}</TableCell>
+                  <TableCell align="right">
+                    {Math.round(
+                      Number(product.order_detail_total) /
+                        Number(product.unit_price)
+                    )}
+                  </TableCell>
                   <TableCell align="right">
                     {product.order_detail_total}
                   </TableCell>
