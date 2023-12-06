@@ -34,7 +34,7 @@ export default function AddEditOrder() {
   const storedOrder = localStorage.getItem(`order-${id}`);
   const initialFormState = storedOrder ? JSON.parse(storedOrder) : {};
   const [form, setForm] = useState(initialFormState);
-  
+
   const [productsForm, setProductsForm] = useState([]);
 
   const [quantity, setQuantity] = useState(0);
@@ -48,7 +48,9 @@ export default function AddEditOrder() {
 
   useEffect(() => {
     if (orderDetailsData) {
+      const price = getFinalPrice(orderDetailsData.products);
       setProductsForm(orderDetailsData.products?.map((item) => item));
+      setFinalPrice(price);
     }
   }, [orderDetailsData]);
 
