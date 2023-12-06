@@ -50,14 +50,14 @@ export default function AddEditOrder() {
     if (orderDetailsData) {
       const price = getFinalPrice(orderDetailsData.products);
       setProductsForm(orderDetailsData.products?.map((item) => item));
-      setFinalPrice(price.toFixed(2));
+      setFinalPrice(price);
     }
   }, [orderDetailsData]);
 
   useEffect(() => {
     if ((productsForm && selectedProduct, quantity)) {
       const price = getFinalPrice(productsForm);
-      setFinalPrice(price.toFixed(2));
+      setFinalPrice(price);
     }
   }, [orderDetailsData, selectedProduct, quantity]);
 
@@ -74,15 +74,15 @@ export default function AddEditOrder() {
       const productPrice =
         Number(selectedProduct.unit_price) * Number(quantity);
 
-      setFinalPrice((prevPrice) => prevPrice + productPrice.toFixed(2));
+      setFinalPrice((prevPrice) => prevPrice + productPrice);
 
       const newProduct = {
         name: selectedProduct.name,
         unit_price: selectedProduct.unit_price,
         product_id: selectedProduct.id,
         qty: quantity,
-        product_total: productPrice.toFixed(2),
-        order_detail_total: productPrice.toFixed(2),
+        product_total: productPrice,
+        order_detail_total: productPrice,
       };
 
       setProductsForm([...productsForm, newProduct]);
