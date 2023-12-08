@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createOrderPayload } from "../utils/createOrderPayload";
 
 export const useOrderDetails = (orderId) => {
   const [result, setResult] = useState({
@@ -28,9 +29,41 @@ export const useOrderDetails = (orderId) => {
     }
   };
 
+  const editOrder = async (order, orderProducts, orderNum, id) => {
+    try {
+      const payload = createOrderPayload(order, orderProducts, orderNum);
+
+      await fetch(`http://localhost:5800/api/v1/orders/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const addOrder = async (order, orderProducts, orderNum) => {
+    try {
+      const payload = createOrderPayload(order, orderProducts, orderNum);
+
+      await fetch(`http://localhost:5800/api/v1/orders/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
     fetchData(`http://localhost:5800/api/v1/orders/details/${orderId}`);
   }, []);
 
-  return result;
+  return { ...result, addOrder, editOrder };
 };

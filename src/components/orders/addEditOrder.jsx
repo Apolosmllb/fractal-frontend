@@ -1,45 +1,26 @@
-import {
-  Box,
-  Button,
-  FormControl,
-  IconButton,
-  InputLabel,
-  MenuItem,
-  Modal,
-  Paper,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-} from "@mui/material";
+import { Box, Button, IconButton, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useProducts } from "../../hooks/useProducts";
 import { useOrderDetails } from "../../hooks/userOrderDetails";
 import RemoveRedEyeOutlinedIcon from "@mui/icons-material/RemoveRedEyeOutlined";
 import dayjs from "dayjs";
+import ProductsModal from "./modals/productsModal";
+import AddProductModal from "./modals/addProductModal";
+import { getFinalPrice } from "../../utils/getFinalPrice";
 
 export default function AddEditOrder() {
   const { id } = useParams();
   const navigate = useNavigate();
   //fetching data
   const { data: productData, isLoading: loadingProducts } = useProducts();
-  const { data: orderDetailsData, isLoading } = useOrderDetails(id);
+  const { data: order, isLoading, editOrder, addOrder } = useOrderDetails(id);
 
-  //form
-  const storedOrder = localStorage.getItem(`order-${id}`);
-  const initialFormState = storedOrder ? JSON.parse(storedOrder) : {};
-  const [form, setForm] = useState(initialFormState);
-
-  const [productsForm, setProductsForm] = useState([]);
-
+  //form data
+  const [orderProducts, setOrderProducts] = useState([]);
   const [quantity, setQuantity] = useState(0);
   const [finalPrice, setFinalPrice] = useState("");
-  const [orderNum, setOrderNum] = useState(initialFormState.order_num ?? "");
+  const [orderNum, setOrderNum] = useState("");
 
   //modal
   const [openModal, setOpenModal] = useState(false);
@@ -47,28 +28,31 @@ export default function AddEditOrder() {
   const [openModalProduct, setOpenModalProduct] = useState(false);
 
   useEffect(() => {
-    if (orderDetailsData) {
-      const price = getFinalPrice(orderDetailsData.products);
-      setProductsForm(orderDetailsData.products?.map((item) => item));
+    if (order) {
+      const price = getFinalPrice(order.order_details);
+      setOrderProducts(order.order_details?.map((item) => item));
+      setOrderNum(order.order_num);
       setFinalPrice(price);
     }
-  }, [orderDetailsData]);
+  }, [order]);
 
   useEffect(() => {
-    if ((productsForm && selectedProduct, quantity)) {
-      const price = getFinalPrice(productsForm);
+    if ((orderProducts && selectedProduct, quantity)) {
+      const price = getFinalPrice(orderProducts);
       setFinalPrice(price);
     }
-  }, [orderDetailsData, selectedProduct, quantity]);
+  }, [order, selectedProduct, quantity]);
 
   const handleOpenModal = () => {
     setOpenModal(true);
   };
+
   const handleCloseModal = () => {
     setOpenModal(false);
     setSelectedProduct("");
     setQuantity("");
   };
+
   const handleConfirmAndSave = () => {
     if (selectedProduct && quantity) {
       const productPrice =
@@ -77,65 +61,26 @@ export default function AddEditOrder() {
       setFinalPrice((prevPrice) => prevPrice + productPrice);
 
       const newProduct = {
-        name: selectedProduct.name,
-        unit_price: selectedProduct.unit_price,
+        detail_unit_price: selectedProduct.unit_price,
         product_id: selectedProduct.id,
-        qty: quantity,
-        product_total: productPrice,
-        order_detail_total: productPrice,
+        product_name: selectedProduct.name,
+        product_unit_price: selectedProduct.unit_price,
+        qty: Number(quantity),
+        total_price: productPrice,
       };
 
-      setProductsForm([...productsForm, newProduct]);
+      setOrderProducts([...orderProducts, newProduct]);
       handleCloseModal();
     }
   };
 
   const handleSaveOrder = async () => {
     if (id) {
-      await editOrder();
+      await editOrder(order, orderProducts, orderNum, id);
     } else {
-      await addOrder();
+      await addOrder(order, orderProducts, orderNum);
     }
     navigate("/my-orders");
-  };
-
-  const addOrder = async () => {
-    try {
-      const productsMap = [...productsForm].map((item) => ({
-        product_id: item.product_id,
-        total_price: Number(item.order_detail_total),
-      }));
-
-      let finalOrderPrice = 0;
-      productsMap.forEach(
-        (item) => (finalOrderPrice += Number(item.total_price))
-      );
-      const currentDate = dayjs();
-      const payload = {
-        order: {
-          ...form,
-          createdAT: currentDate.format("YYYY-MM-DD"),
-          final_price: finalOrderPrice,
-          order_num: orderNum,
-        },
-        orderDetails: [
-          ...productsForm.map((item) => ({
-            product_id: item.product_id,
-            total_price: Number(item.order_detail_total),
-          })),
-        ],
-      };
-
-      await fetch(`http://localhost:5800/api/v1/orders/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-    } catch (error) {
-      console.log(error);
-    }
   };
 
   const handleOpenModalProducts = () => {
@@ -146,64 +91,16 @@ export default function AddEditOrder() {
     setOpenModalProduct(false);
   };
 
-  const editOrder = async () => {
-    try {
-      const productsMap = [...productsForm].map((item) => ({
-        product_id: item.product_id,
-        total_price: Number(item.order_detail_total),
-      }));
-
-      let finalOrderPrice = 0;
-      productsMap.forEach(
-        (item) => (finalOrderPrice += Number(item.total_price))
-      );
-      const currentDate = dayjs();
-      const payload = {
-        order: {
-          ...form,
-          createdAT: currentDate.format("YYYY-MM-DD"),
-          final_price: finalOrderPrice,
-          order_num: orderNum,
-        },
-        orderDetails: [
-          ...productsForm.map((item) => ({
-            product_id: item.product_id,
-            total_price: Number(item.order_detail_total),
-          })),
-        ],
-      };
-
-      await fetch(`http://localhost:5800/api/v1/orders/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   const handleDeleteProduct = (id) => {
-    const newProducts = productsForm.filter(
+    const newProducts = orderProducts.filter(
       (product) => product.product_id !== id
     );
     const newFinalPrice = getFinalPrice(newProducts);
 
-    setProductsForm(newProducts);
+    setOrderProducts(newProducts);
     setFinalPrice(newFinalPrice);
   };
 
-  const getFinalPrice = (productArr) => {
-    let totalPrice = 0;
-
-    productArr.forEach((product) => {
-      totalPrice += Number(product?.order_detail_total);
-    });
-
-    return totalPrice;
-  };
   return (
     <>
       {id ? <h2>Edit order</h2> : <h2>Add order</h2>}
@@ -219,7 +116,7 @@ export default function AddEditOrder() {
         <TextField
           label="Date"
           value={
-            dayjs(form?.createdAt).format("YYYY-MM-DD") ||
+            dayjs(order?.createdAt).format("YYYY-MM-DD") ||
             dayjs().format("YYYY-MM-DD")
           }
           fullWidth
@@ -239,7 +136,7 @@ export default function AddEditOrder() {
           <TextField
             fullWidth
             disabled
-            value={[...productsForm]?.map((item) => item.name).join(", ")}
+            value={[...orderProducts]?.map((item) => item.product_name).join(", ")}
           ></TextField>
           <IconButton onClick={() => handleOpenModalProducts()}>
             <RemoveRedEyeOutlinedIcon></RemoveRedEyeOutlinedIcon>
@@ -268,106 +165,23 @@ export default function AddEditOrder() {
           Save Order
         </Button>
       </form>
-
-      <Modal open={openModal} onClose={handleCloseModal}>
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 400,
-            bgcolor: "background.paper",
-            boxShadow: 24,
-            p: 4,
-          }}
-        >
-          <h2>Add New Product</h2>
-          <FormControl
-            fullWidth
-            margin="normal"
-            variant="outlined"
-            sx={{ mt: 2 }}
-          >
-            <InputLabel>Select Product</InputLabel>
-            {loadingProducts ? (
-              <p>Loading...</p>
-            ) : (
-              <Select
-                value={selectedProduct || ""}
-                onChange={(e) => setSelectedProduct(e.target.value)}
-                renderValue={(selected) => selected?.name || ""}
-              >
-                {productData?.map((product) => (
-                  <MenuItem key={product.id} value={product}>
-                    {product.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            )}
-          </FormControl>
-          <TextField
-            label="Quantity"
-            type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            fullWidth
-            margin="normal"
-            variant="outlined"
-            sx={{ mt: 2 }}
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleConfirmAndSave}
-            sx={{ mt: 2 }}
-          >
-            Confirm and Save
-          </Button>
-        </Box>
-      </Modal>
-
-      <Modal open={openModalProduct} onClose={handleCloseModalProducts}>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Product Name</TableCell>
-                <TableCell align="right">Unit Price</TableCell>
-                <TableCell align="right">Qty</TableCell>
-                <TableCell align="right">Total Price</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {productsForm.map((product) => (
-                <TableRow key={crypto.randomUUID()}>
-                  <TableCell component="th" scope="row">
-                    {product.name}
-                  </TableCell>
-                  <TableCell align="right">{product.unit_price}</TableCell>
-                  <TableCell align="right">
-                    {Math.round(
-                      Number(product.order_detail_total) /
-                        Number(product.unit_price)
-                    )}
-                  </TableCell>
-                  <TableCell align="right">
-                    {product.order_detail_total}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button
-                      onClick={() => handleDeleteProduct(product.product_id)}
-                    >
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Modal>
+      <AddProductModal
+        openModal={openModal}
+        handleCloseModal={handleCloseModal}
+        loadingProducts={loadingProducts}
+        selectedProduct={selectedProduct}
+        setSelectedProduct={setSelectedProduct}
+        productData={productData}
+        quantity={quantity}
+        setQuantity={setQuantity}
+        handleConfirmAndSave={handleConfirmAndSave}
+      />
+      <ProductsModal
+        openModalProduct={openModalProduct}
+        handleCloseModalProducts={handleCloseModalProducts}
+        orderProducts={orderProducts}
+        handleDeleteProduct={handleDeleteProduct}
+      />
     </>
   );
 }

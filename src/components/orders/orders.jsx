@@ -22,6 +22,7 @@ import {
   Button,
 } from "@mui/material";
 import dayjs from "dayjs";
+import DeleteConfirmationModal from "./modals/deleteConfirmationModal";
 
 export default function Orders() {
   const { isLoading, data, error } = useOrders();
@@ -36,12 +37,7 @@ export default function Orders() {
   const navigate = useNavigate();
 
   const handleButtonClick = (order) => {
-    if (!order?.order_id) {
-      navigate("/add-order");
-    } else {
-      localStorage.setItem(`order-${order.order_id}`, JSON.stringify(order));
-      navigate(`/add-order/${order.order_id}`);
-    }
+    !order?.id ? navigate("/add-order") : navigate(`/add-order/${order.id}`);
   };
 
   const handleOpen = (id) => {
@@ -60,7 +56,7 @@ export default function Orders() {
         method: "DELETE",
       });
       setOrders((prevOrders) =>
-        prevOrders.filter((order) => order.order_id !== orderIdToRemove)
+        prevOrders.filter((order) => order.id !== orderIdToRemove)
       );
     } catch (error) {
       console.log(error);
@@ -106,26 +102,26 @@ export default function Orders() {
             <TableBody>
               {orders?.map((row) => (
                 <TableRow
-                  key={row.order_id}
+                  key={crypto.randomUUID()}
                   sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                 >
                   <TableCell component="th" scope="row">
-                    {row.order_id}
+                    {row.id}
                   </TableCell>
-                  <TableCell component="th" scope="row">
-                    {row.order_num}
-                  </TableCell>
-                  <TableCell component="th" scope="row">
+                  <TableCell align="right">{row.order_num}</TableCell>
+                  <TableCell align="right">
                     {dayjs(row.createdAT).format("YYYY-MM-DD")}
                   </TableCell>
-                  <TableCell align="right">{row.numProds}</TableCell>
+                  <TableCell align="right">
+                    {row.order_details.length ?? 0}
+                  </TableCell>
                   <TableCell align="right">{row.status}</TableCell>
                   <TableCell align="right">{row.final_price}</TableCell>
                   <TableCell align="right">
                     <IconButton onClick={() => handleButtonClick(row)}>
                       <EditIcon fontSize="inherit"></EditIcon>
                     </IconButton>
-                    <IconButton onClick={createHandleRemove(row.order_id)}>
+                    <IconButton onClick={createHandleRemove(row.id)}>
                       <DeleteIcon fontSize="inherit"></DeleteIcon>
                     </IconButton>
                   </TableCell>
@@ -135,20 +131,11 @@ export default function Orders() {
           </Table>
         </TableContainer>
       )}
-      <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>{"Confirm Delete"}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this order?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>No</Button>
-          <Button onClick={handleRemove} autoFocus>
-            Yes
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DeleteConfirmationModal
+        open={open}
+        handleClose={handleClose}
+        handleRemove={handleRemove}
+      />
     </>
   );
 }
